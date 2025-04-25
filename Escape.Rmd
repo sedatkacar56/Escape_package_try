@@ -1,0 +1,237 @@
+---
+title: "Escape"
+author: "Sedat Kacar"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+
+```{r}
+ESCAPE = Easy single-cell analysis platform for enrichment
+
+library(escape)
+
+
+ls("package:escape")
+
+```
+```{r}
+GS.hallmark <- getGeneSets(library = "C2")
+```
+
+```{r}
+GS.hallmark <- getGeneSets(library = "H", species = "Mus musculus")   # For mouse  
+
+
+int_sugen10 <- runEscape(
+  int_sugen10,
+  method = "AUCell",                # <- Use UCell method here
+  gene.sets = GS.hallmark,
+  groups = 10000,
+  min.size = 5,
+  new.assay.name = "escape.AUCell"  # Save as a new assay
+)
+
+```
+
+
+```{r}
+# 4. Normalize enrichment scores (optional but useful)
+int_sugen10 <- performNormalization(
+  int_sugen10,
+  assay = "escape.AUCell",
+  gene.sets = GS.hallmark,
+  scale.factor = int_sugen10$nFeature_RNA
+)
+
+```
+
+
+```{r, fig.height=15, fig.width=11}
+
+heatmapEnrichment(int_sugen10, 
+                  group.by = "cond_Elhcall",
+                  gene.set.use = rownames(int_sugen10@assays$escape.UCell)[3],
+                  assay = "escape.UCell_normalized",
+                   palette = "YlGn") + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(
+    #legend.title = element_text(angle = 90, size = 10, hjust = 0.5),
+    legend.text  = element_text(angle = 90, size = 8, hjust = 0.5)  # rotate tick labels
+)
+
+
+
+# SHOW WITH FEATUREPLOT
+#Define color palette 
+colorblind_vector <- hcl.colors(n=7, palette = "inferno", fixup = TRUE)
+DefaultAssay(int_sugen10) <- "escape.UCell"  # or "escape.UCell_normalized" if you used normalization
+
+FeaturePlot(int_sugen10, "HALLMARK-REACTIVE-OXYGEN-SPECIES-PATHWAY", split.by = "condition") +
+  scale_color_gradientn(colors = colorblind_vector) +
+  theme(plot.title = element_blank())
+
+hcl.pals()
+
+int_sugen10$cond_Elhcall <- paste(int_sugen10$condition, int_sugen10$Elhcall)
+rownames(int_sugen10@assays[["escape.AUCell"]])
+
+```
+
+# geyserEnrichment
+```{r, fig.height=15, fig.width=11}
+geyserEnrichment(int_sugen10, 
+                 assay = "escape.AUCell_normalized",
+                 gene.set = "HALLMARK-INTERFERON-GAMMA-RESPONSE")
+
+
+geyserEnrichment(int_sugen10, 
+                 assay = "escape.UCell_normalized",
+                 gene.set = "HALLMARK-INTERFERON-GAMMA-RESPONSE", 
+                 order.by = "mean") 
+
+geyserEnrichment(int_sugen10, 
+                 assay = "escape.UCell_normalized",
+                 gene.set = "HALLMARK-INTERFERON-GAMMA-RESPONSE", 
+                 facet.by = "condition",
+                 group.by = "Elhcall") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+?geyserEnrichment
+
+geyserEnrichment(int_sugen10, 
+                 assay = "escape.UCell_normalized",
+                 gene.set = "HALLMARK-INTERFERON-GAMMA-RESPONSE", 
+                 color.by  = "HALLMARK-INTERFERON-GAMMA-RESPONSE")
+```
+
+
+
+#ridgeEnrichment
+```{r}
+
+ridgeEnrichment(int_sugen10, 
+                assay = "escape.AUCell_normalized",
+                gene.set = "HALLMARK-HYPOXIA",
+                group.by = "cond_Elhcall") 
+
+ridgeEnrichment(int_sugen10, 
+                assay = "escape.UCell_normalized",
+                gene.set = "HALLMARK-HYPOXIA",
+                add.rug = FALSE,
+                scale = TRUE,
+                group.by = "Elhcall")
+
+
+rownames(int_sugen10@assays[["escape.AUCell"]])
+
+?ridgeEnrichment
+```
+
+# splitEnrichment
+
+```{r, fig.height=5, fig.width=15}
+splitEnrichment(int_sugen10, 
+                assay = "escape.UCell_normalized",
+                gene.set = "HALLMARK-APOPTOSIS", 
+                split.by = "condition", group.by = "origin_of_cells_nounk") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+int_sugen10$origin_of_cells_nounk
+rownames(int_sugen10@assays$escape.UCell_normalized)
+```
+
+#densityEnrichment
+
+```{r}
+#densityEnrichment(int_sugen10, 
+                  gene.set.use = "HALLMARK-IL6-JAK-STAT3-SIGNALING", 
+                  group.by = "condition",
+                  gene.sets = GS.hallmark)
+```
+
+
+# scatterEnrichment
+
+
+```{r}
+scatterEnrichment(int_sugen10, 
+                  assay = "escape.UCell_normalized",
+                  x.axis = "HALLMARK-APOPTOSIS",
+                  y.axis = "HALLMARK-ANGIOGENESIS")
+
+scatterEnrichment(int_sugen10, 
+                  assay = "escape.UCell_normalized",
+                  x.axis = "HALLMARK-APOPTOSIS",
+                  y.axis = "HALLMARK-ANGIOGENESIS", 
+                  style = "hex",
+                  facet.by = "condition")
+
+?scatterEnrichment
+```
+
+#Ididnot do next 
+#Principal Component Analysis (PCA)
+
+
+```{r}
+int_sugen10 <- performPCA(int_sugen10, 
+                            assay = "escape.UCell_normalized",
+                            n.dim = 1:10)
+
+pcaEnrichment(int_sugen10, 
+              dimRed = "escape.PCA",
+              x.axis = "PC1",
+              y.axis = "PC2")
+
+pcaEnrichment(int_sugen10, 
+              dimRed = "escape.PCA",
+              x.axis = "PC1",
+              y.axis = "PC2",
+              add.percent.contribution = TRUE,
+              display.factors = TRUE,
+              number.of.factors = 10)
+
+?pcaEnrichment
+
+
+DimPlot(int_sugen10, reduction = "escape.PCA", group.by = "Elhcall")
+
+
+# Set the default assay to your normalized enrichment
+DefaultAssay(int_sugen10) <- "escape.UCell_normalized"
+
+# Run UMAP based on the enrichment scores
+int_sugen10 <- RunUMAP(int_sugen10, reduction = "escape.PCA", dims = 1:10, reduction.name = "umap_escape")
+
+# Plot the UMAP
+DimPlot(int_sugen10, reduction = "umap_escape", group.by = "Elhcall", split.by = "condition") + NoLegend()  # Replace 'Elhcall' with your grouping column
+
+
+FeaturePlot()
+
+FeaturePlot(int_sugen10, "HALLMARK-REACTIVE-OXYGEN-SPECIES-PATHWAY", split.by = "condition", reduction = "umap_escape")
+FeaturePlot(int_sugen10, "HALLMARK-ANGIOGENESIS", split.by = "condition", reduction = "umap_escape")
+
+```
+
+# Differential Enrichment
+
+
+```{r}
+int_sugen10 <- performNormalization(int_sugen10, 
+                                      assay = "escape.UCell_normalized", 
+                                      gene.sets = GS.hallmark, 
+                                      scale.factor = int_sugen10$nFeature_RNA)
+
+
+all.markers <- FindAllMarkers(int_sugen10, 
+                              assay = "escape.UCell_normalized", 
+                              min.pct = 0,
+                              logfc.threshold = 0)
+
+
+
+head(all.markers)
+
+rownames(int_sugen10@assays$escape.UCell_normalized)
+
+```
+
